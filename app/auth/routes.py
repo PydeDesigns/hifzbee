@@ -10,6 +10,7 @@ from oauthlib.oauth2 import WebApplicationClient
 import requests
 import json
 import os
+from sqlalchemy.exc import SQLAlchemyError, OperationalError, ProgrammingError
 
 # Google OAuth Configuration
 GOOGLE_CLIENT_ID = os.environ.get('GOOGLE_CLIENT_ID')
@@ -192,6 +193,19 @@ def google_callback():
 def register():
     if current_user.is_authenticated:
         return redirect(url_for('main.index'))
+    
+    # Test database connection first
+    try:
+        db.session.execute('SELECT 1')
+    except OperationalError as e:
+        current_app.logger.error(f"Database connection error: {str(e)}")
+        flash('Unable to connect to database. Please try again later.', 'danger')
+        return redirect(url_for('auth.register'))
+    except ProgrammingError as e:
+        current_app.logger.error(f"Database schema error: {str(e)}")
+        flash('Database setup incomplete. Please try again later.', 'danger')
+        return redirect(url_for('auth.register'))
+    
     form = RegistrationForm()
     if form.validate_on_submit():
         try:
@@ -213,19 +227,26 @@ def register():
             # Log the attempt
             current_app.logger.info(f"Attempting to register user: {form.username.data}")
             
-            # Add to database
-            db.session.add(user)
-            db.session.commit()
-            
-            current_app.logger.info(f"Successfully registered user: {form.username.data}")
-            flash('Congratulations, you are now registered!', 'success')
-            return redirect(url_for('auth.login'))
+            try:
+                # Add to database
+                db.session.add(user)
+                db.session.commit()
+                current_app.logger.info(f"Successfully registered user: {form.username.data}")
+                flash('Congratulations, you are now registered!', 'success')
+                return redirect(url_for('auth.login'))
+            except SQLAlchemyError as e:
+                db.session.rollback()
+                current_app.logger.error(f"Database error during user registration: {str(e)}")
+                flash('Database error during registration. Please try again.', 'danger')
+                return redirect(url_for('auth.register'))
+                
         except Exception as e:
             db.session.rollback()
             current_app.logger.error(f"Registration error for user {form.username.data}: {str(e)}")
             current_app.logger.exception("Full traceback:")
             flash('An error occurred during registration. Please try again.', 'danger')
             return redirect(url_for('auth.register'))
+            
     return render_template('auth/register.html', title='Register', form=form)
 
 @bp.route('/logout')
