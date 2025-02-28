@@ -2,6 +2,7 @@ from app import create_app, db
 import logging
 from sqlalchemy import text
 from sqlalchemy.exc import SQLAlchemyError, OperationalError
+import time
 
 # Set up logging
 logging.basicConfig(
@@ -10,20 +11,36 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
+def wait_for_db(app, max_retries=5, delay=5):
+    """Wait for database to be ready"""
+    retries = 0
+    while retries < max_retries:
+        try:
+            with app.app_context():
+                # Try a simple query
+                db.session.execute(text('SELECT 1'))
+                logger.info("Database is ready!")
+                return True
+        except Exception as e:
+            retries += 1
+            logger.warning(f"Database not ready (attempt {retries}/{max_retries}): {str(e)}")
+            if retries < max_retries:
+                logger.info(f"Waiting {delay} seconds before retrying...")
+                time.sleep(delay)
+    
+    logger.error("Max retries reached. Database is not available.")
+    return False
+
 def init_db():
     try:
         app = create_app()
-        logger.info(f"Database URL: {app.config['SQLALCHEMY_DATABASE_URI'].replace('://', '://<hidden>:<hidden>@')}")
         
-        with app.app_context():
-            # Test database connection
-            try:
-                db.session.execute(text('SELECT 1'))
-                logger.info("Successfully connected to database!")
-            except OperationalError as e:
-                logger.error(f"Failed to connect to database: {str(e)}")
-                raise
+        # Wait for database to be ready
+        if not wait_for_db(app):
+            logger.error("Could not connect to database after multiple attempts")
+            return False
 
+        with app.app_context():
             try:
                 # Drop all tables if they exist
                 logger.info("Dropping all existing tables...")
@@ -44,6 +61,8 @@ def init_db():
                     columns = [col['name'] for col in inspector.get_columns(table)]
                     logger.info(f"  Columns: {', '.join(columns)}")
 
+                return True
+
             except SQLAlchemyError as e:
                 logger.error(f"Database schema error: {str(e)}")
                 raise
@@ -53,5 +72,11 @@ def init_db():
         logger.exception("Full traceback:")
         raise
 
+    return False
+
 if __name__ == '__main__':
-    init_db()
+    success = init_db()
+    if not success:
+        logger.error("Database initialization failed")
+        exit(1)
+    logger.info("Database initialization completed successfully")

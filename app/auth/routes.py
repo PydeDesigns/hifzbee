@@ -11,6 +11,7 @@ import requests
 import json
 import os
 from sqlalchemy.exc import SQLAlchemyError, OperationalError, ProgrammingError
+from sqlalchemy import text
 
 # Google OAuth Configuration
 GOOGLE_CLIENT_ID = os.environ.get('GOOGLE_CLIENT_ID')
@@ -194,31 +195,30 @@ def register():
     if current_user.is_authenticated:
         return redirect(url_for('main.index'))
     
+    form = RegistrationForm()
+    
     # Test database connection first
     try:
-        db.session.execute('SELECT 1')
-    except OperationalError as e:
+        with current_app.app_context():
+            db.session.execute(text('SELECT 1'))
+    except Exception as e:
         current_app.logger.error(f"Database connection error: {str(e)}")
-        flash('Unable to connect to database. Please try again later.', 'danger')
-        return redirect(url_for('auth.register'))
-    except ProgrammingError as e:
-        current_app.logger.error(f"Database schema error: {str(e)}")
-        flash('Database setup incomplete. Please try again later.', 'danger')
-        return redirect(url_for('auth.register'))
+        # Don't redirect, just render the template with an error message
+        flash('Database connection issue. Please try again later.', 'danger')
+        return render_template('auth/register.html', title='Register', form=form)
     
-    form = RegistrationForm()
     if form.validate_on_submit():
         try:
             # Check if user already exists
             existing_user = User.query.filter_by(email=form.email.data).first()
             if existing_user:
                 flash('Email address already registered', 'danger')
-                return redirect(url_for('auth.register'))
+                return render_template('auth/register.html', title='Register', form=form)
             
             existing_username = User.query.filter_by(username=form.username.data).first()
             if existing_username:
                 flash('Username already taken', 'danger')
-                return redirect(url_for('auth.register'))
+                return render_template('auth/register.html', title='Register', form=form)
             
             # Create new user
             user = User(username=form.username.data, email=form.email.data)
@@ -238,14 +238,14 @@ def register():
                 db.session.rollback()
                 current_app.logger.error(f"Database error during user registration: {str(e)}")
                 flash('Database error during registration. Please try again.', 'danger')
-                return redirect(url_for('auth.register'))
+                return render_template('auth/register.html', title='Register', form=form)
                 
         except Exception as e:
             db.session.rollback()
             current_app.logger.error(f"Registration error for user {form.username.data}: {str(e)}")
             current_app.logger.exception("Full traceback:")
             flash('An error occurred during registration. Please try again.', 'danger')
-            return redirect(url_for('auth.register'))
+            return render_template('auth/register.html', title='Register', form=form)
             
     return render_template('auth/register.html', title='Register', form=form)
 
