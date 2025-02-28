@@ -6,9 +6,12 @@ from config import Config
 import logging
 from logging.handlers import RotatingFileHandler
 import os
+from sqlalchemy import text
 
 db = SQLAlchemy()
 login_manager = LoginManager()
+login_manager.login_view = 'auth.login'
+login_manager.login_message_category = 'info'
 mail = Mail()
 
 def create_app():
@@ -20,8 +23,21 @@ def create_app():
     login_manager.init_app(app)
     mail.init_app(app)
 
-    login_manager.login_view = 'auth.login'
-    login_manager.login_message_category = 'info'
+    # Initialize database tables
+    with app.app_context():
+        try:
+            # Test database connection
+            db.session.execute(text('SELECT 1'))
+            logging.info("Database connection successful")
+
+            # Create tables if they don't exist
+            db.create_all()
+            logging.info("Database tables created/verified")
+
+        except Exception as e:
+            logging.error(f"Database initialization error: {str(e)}")
+            logging.exception("Full traceback:")
+            # Don't raise the error, let the app continue
 
     # Register blueprints
     from app.auth import bp as auth_bp

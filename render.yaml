@@ -3,14 +3,13 @@ services:
     name: hifzbee
     env: python
     buildCommand: pip install -r requirements.txt
-    startCommand: python init_db.py && gunicorn "app:create_app()"
+    startCommand: python run.py
     envVars:
       - key: PYTHON_VERSION
-        value: 3.11.0
-      - key: FLASK_APP
-        value: app
+        value: 3.9.0
       - key: FLASK_ENV
         value: production
-      - key: SECRET_KEY
-        generateValue: true
-    autoDeploy: true
+      - key: DATABASE_URL
+        fromDatabase:
+          name: hifzbee-db
+          property: connectionString
