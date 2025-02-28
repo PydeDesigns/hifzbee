@@ -195,14 +195,35 @@ def register():
     form = RegistrationForm()
     if form.validate_on_submit():
         try:
+            # Check if user already exists
+            existing_user = User.query.filter_by(email=form.email.data).first()
+            if existing_user:
+                flash('Email address already registered', 'danger')
+                return redirect(url_for('auth.register'))
+            
+            existing_username = User.query.filter_by(username=form.username.data).first()
+            if existing_username:
+                flash('Username already taken', 'danger')
+                return redirect(url_for('auth.register'))
+            
+            # Create new user
             user = User(username=form.username.data, email=form.email.data)
             user.set_password(form.password.data)
+            
+            # Log the attempt
+            current_app.logger.info(f"Attempting to register user: {form.username.data}")
+            
+            # Add to database
             db.session.add(user)
             db.session.commit()
+            
+            current_app.logger.info(f"Successfully registered user: {form.username.data}")
             flash('Congratulations, you are now registered!', 'success')
             return redirect(url_for('auth.login'))
         except Exception as e:
-            current_app.logger.error(f"Registration error: {str(e)}")
+            db.session.rollback()
+            current_app.logger.error(f"Registration error for user {form.username.data}: {str(e)}")
+            current_app.logger.exception("Full traceback:")
             flash('An error occurred during registration. Please try again.', 'danger')
             return redirect(url_for('auth.register'))
     return render_template('auth/register.html', title='Register', form=form)
