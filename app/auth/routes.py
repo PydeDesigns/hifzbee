@@ -16,7 +16,15 @@ GOOGLE_CLIENT_ID = os.environ.get('GOOGLE_CLIENT_ID')
 GOOGLE_CLIENT_SECRET = os.environ.get('GOOGLE_CLIENT_SECRET')
 GOOGLE_DISCOVERY_URL = "https://accounts.google.com/.well-known/openid-configuration"
 
+# Initialize OAuth client
 client = WebApplicationClient(GOOGLE_CLIENT_ID) if GOOGLE_CLIENT_ID else None
+
+def get_google_provider_cfg():
+    try:
+        return requests.get(GOOGLE_DISCOVERY_URL).json()
+    except Exception as e:
+        current_app.logger.error(f"Error fetching Google provider config: {str(e)}")
+        return None
 
 @bp.route('/login', methods=['GET', 'POST'])
 def login():
@@ -78,20 +86,24 @@ def guest_login():
 
 @bp.route('/google-login')
 def google_login():
-    if not GOOGLE_CLIENT_ID:
+    if not GOOGLE_CLIENT_ID or not client:
         flash('Google login is not configured', 'warning')
         return redirect(url_for('auth.login'))
     
     try:
-        # Find out what URL to hit for Google login
-        google_provider_cfg = requests.get(GOOGLE_DISCOVERY_URL).json()
+        # Get Google provider configuration
+        google_provider_cfg = get_google_provider_cfg()
+        if not google_provider_cfg:
+            flash('Error connecting to Google services', 'danger')
+            return redirect(url_for('auth.login'))
+
         authorization_endpoint = google_provider_cfg["authorization_endpoint"]
 
-        # Use library to construct the request for login and provide
-        # scopes that let you retrieve user's profile from Google
+        # Use library to construct the request for login
+        callback_url = url_for('auth.google_callback', _external=True)
         request_uri = client.prepare_request_uri(
             authorization_endpoint,
-            redirect_uri=request.base_url + "/callback",
+            redirect_uri=callback_url,
             scope=["openid", "email", "profile"],
         )
         return redirect(request_uri)
@@ -102,29 +114,37 @@ def google_login():
 
 @bp.route('/google-login/callback')
 def google_callback():
-    if not GOOGLE_CLIENT_ID:
+    if not GOOGLE_CLIENT_ID or not client:
         flash('Google login is not configured', 'warning')
         return redirect(url_for('auth.login'))
-    
+
     try:
-        # Get authorization code Google sent back
-        code = request.args.get("code")
-        if not code:
-            flash('Google login failed', 'danger')
+        # Get Google provider configuration
+        google_provider_cfg = get_google_provider_cfg()
+        if not google_provider_cfg:
+            flash('Error connecting to Google services', 'danger')
             return redirect(url_for('auth.login'))
 
-        # Find out what URL to hit to get tokens that allow you to ask for
-        # things on behalf of a user
-        google_provider_cfg = requests.get(GOOGLE_DISCOVERY_URL).json()
+        # Get authorization code from Google
+        code = request.args.get("code")
+        if not code:
+            flash('No authorization code received from Google', 'danger')
+            return redirect(url_for('auth.login'))
+
+        # Find out what URL to hit to get tokens
         token_endpoint = google_provider_cfg["token_endpoint"]
+        
+        # Get callback URL
+        callback_url = url_for('auth.google_callback', _external=True)
 
         # Prepare and send request to get tokens
         token_url, headers, body = client.prepare_token_request(
             token_endpoint,
             authorization_response=request.url,
-            redirect_url=request.base_url,
-            code=code,
+            redirect_url=callback_url,
+            code=code
         )
+        
         token_response = requests.post(
             token_url,
             headers=headers,
@@ -143,30 +163,29 @@ def google_callback():
         if userinfo_response.json().get("email_verified"):
             unique_id = userinfo_response.json()["sub"]
             users_email = userinfo_response.json()["email"]
-            users_name = userinfo_response.json()["given_name"]
+            users_name = userinfo_response.json().get("given_name", users_email.split('@')[0])
 
             # Create or get user
             user = User.query.filter_by(email=users_email).first()
             if not user:
                 user = User(
                     username=users_name,
-                    email=users_email,
-                    google_id=unique_id
+                    email=users_email
                 )
-                user.set_password(str(uuid.uuid4()))
                 db.session.add(user)
                 db.session.commit()
 
+            # Begin user session by logging the user in
             login_user(user)
-            flash(f'Welcome, {users_name}!', 'success')
+            flash('Successfully logged in with Google!', 'success')
             return redirect(url_for('main.index'))
         else:
-            flash('Google login failed: Email not verified', 'danger')
+            flash('Email not verified by Google', 'danger')
             return redirect(url_for('auth.login'))
-            
+
     except Exception as e:
         current_app.logger.error(f"Google callback error: {str(e)}")
-        flash('An error occurred during Google login. Please try again.', 'danger')
+        flash('Failed to log in with Google. Please try again.', 'danger')
         return redirect(url_for('auth.login'))
 
 @bp.route('/register', methods=['GET', 'POST'])
