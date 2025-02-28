@@ -1,0 +1,99 @@
+{% extends "base.html" %}
+
+{% block title %}Home{% endblock %}
+
+{% block content %}
+<div class="jumbotron text-center py-5 bg-light rounded">
+    <h1 class="display-4">Welcome to World Wide Hatim</h1>
+    <p class="lead">Join the global community in reading and completing Quran hatims together.</p>
+    {% if not current_user.is_authenticated %}
+    <div class="mt-4">
+        <a href="{{ url_for('auth.register') }}" class="btn btn-primary btn-lg me-2">Get Started</a>
+        <a href="{{ url_for('auth.login') }}" class="btn btn-outline-primary btn-lg">Sign In</a>
+    </div>
+    {% endif %}
+</div>
+
+{% if current_user.is_authenticated %}
+<div class="row mt-5">
+    <div class="col-md-8">
+        <h2>Recent Public Hatims</h2>
+        {% if public_hatims %}
+        <div class="row">
+            {% for hatim in public_hatims %}
+            <div class="col-md-6 mb-4">
+                <div class="card">
+                    <div class="card-body">
+                        <h5 class="card-title">{{ hatim.title }}</h5>
+                        <p class="card-text">
+                            Created by: {{ hatim.creator.username }}<br>
+                            Created: {{ hatim.created_at.strftime('%Y-%m-%d') }}
+                        </p>
+                        <a href="{{ url_for('hatim.join', hatim_id=hatim.id) }}" 
+                           class="btn btn-primary">Join Hatim</a>
+                    </div>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+        {% else %}
+        <p>No public hatims available at the moment.</p>
+        {% endif %}
+    </div>
+    
+    <div class="col-md-4">
+        <div class="card">
+            <div class="card-body">
+                <h5 class="card-title">Quick Actions</h5>
+                <div class="d-grid gap-2">
+                    <a href="{{ url_for('hatim.create') }}" class="btn btn-primary">
+                        Start New Hatim
+                    </a>
+                    <a href="{{ url_for('hatim.browse') }}" class="btn btn-outline-primary">
+                        Browse All Hatims
+                    </a>
+                </div>
+            </div>
+        </div>
+        
+        <div class="card mt-4">
+            <div class="card-body">
+                <h5 class="card-title">Your Stats</h5>
+                <ul class="list-unstyled">
+                    <li>XP Points: {{ current_user.xp_points }}</li>
+                    <li>Hatims Completed: {{ current_user.participations.filter_by(completion_status=True).count() }}</li>
+                    <li>Active Hatims: {{ current_user.participations.filter_by(completion_status=False).count() }}</li>
+                </ul>
+            </div>
+        </div>
+    </div>
+</div>
+{% else %}
+<div class="row mt-5">
+    <div class="col-md-4">
+        <div class="card text-center">
+            <div class="card-body">
+                <h3 class="card-title">Track Progress</h3>
+                <p class="card-text">Monitor your Quran reading progress and stay motivated.</p>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="card text-center">
+            <div class="card-body">
+                <h3 class="card-title">Join Community</h3>
+                <p class="card-text">Connect with others and participate in group hatims.</p>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="card text-center">
+            <div class="card-body">
+                <h3 class="card-title">Earn Rewards</h3>
+                <p class="card-text">Gain XP and achievements as you complete hatims.</p>
+            </div>
+        </div>
+    </div>
+</div>
+{% endif %}
+{% endblock %}

@@ -1,0 +1,256 @@
+{% extends "base.html" %}
+
+{% block title %}Join Hatim{% endblock %}
+
+{% block styles %}
+<style>
+    .honeycomb {
+        display: grid;
+        grid-template-columns: repeat(6, 1fr);
+        gap: 15px;
+        padding: 20px;
+        margin: 0 auto;
+        max-width: 1200px;
+    }
+
+    .honeycomb-cell {
+        position: relative;
+        width: 100%;
+        padding-top: 115%; /* Aspect ratio for hexagon */
+        cursor: pointer;
+    }
+
+    .honeycomb-cell:nth-child(even) {
+        transform: translateY(50%);
+    }
+
+    .honeycomb-content {
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        clip-path: polygon(50% 0%, 100% 25%, 100% 75%, 50% 100%, 0% 75%, 0% 25%);
+        background-color: var(--bee-yellow-light);
+        border: 2px solid var(--bee-yellow);
+        transition: all 0.3s ease;
+    }
+
+    .honeycomb-cell.taken .honeycomb-content {
+        background-color: #e9ecef;
+        border-color: #dee2e6;
+        cursor: not-allowed;
+    }
+
+    .honeycomb-cell:not(.taken):hover .honeycomb-content {
+        background-color: var(--bee-yellow);
+        transform: scale(1.05);
+    }
+
+    .honeycomb-cell.selected .honeycomb-content {
+        background-color: var(--bee-brown);
+        border-color: var(--bee-brown);
+        color: var(--bee-yellow);
+    }
+
+    .juz-number {
+        font-size: 1.5rem;
+        font-weight: bold;
+        margin-bottom: 5px;
+    }
+
+    .juz-status {
+        font-size: 0.8rem;
+        text-align: center;
+    }
+
+    .selected-juz {
+        background-color: var(--bee-yellow-light);
+        padding: 10px;
+        border-radius: 8px;
+        margin-top: 20px;
+    }
+
+    .selected-juz-tag {
+        display: inline-block;
+        padding: 5px 10px;
+        margin: 2px;
+        background-color: var(--bee-brown);
+        color: var(--bee-yellow);
+        border-radius: 15px;
+        font-size: 0.9rem;
+    }
+
+    /* Mobile Responsive */
+    @media (max-width: 768px) {
+        .honeycomb {
+            grid-template-columns: repeat(3, 1fr);
+            gap: 10px;
+            padding: 10px;
+        }
+
+        .juz-number {
+            font-size: 1.2rem;
+        }
+
+        .juz-status {
+            font-size: 0.7rem;
+        }
+    }
+
+    @media (max-width: 480px) {
+        .honeycomb {
+            grid-template-columns: repeat(2, 1fr);
+        }
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container">
+    <div class="row justify-content-center">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header bg-warning text-dark">
+                    <h3 class="card-title mb-0">
+                        <i class="fas fa-book-reader"></i> Join Hatim: {{ hatim.title }}
+                    </h3>
+                </div>
+                <div class="card-body">
+                    <!-- Hatim Information -->
+                    <div class="mb-4">
+                        <div class="d-flex align-items-center mb-2">
+                            <i class="fas fa-info-circle text-warning me-2"></i>
+                            <h5 class="mb-0">Hatim Details</h5>
+                        </div>
+                        <div class="bg-light p-3 rounded">
+                            <p class="mb-2">
+                                <i class="fas fa-user text-warning"></i>
+                                <strong>Created by:</strong> {{ hatim.creator.username }}
+                            </p>
+                            <p class="mb-0">
+                                <i class="fas fa-calendar text-warning"></i>
+                                <strong>Target completion:</strong> {{ hatim.target_completion_date.strftime('%B %d, %Y') }}
+                            </p>
+                        </div>
+                    </div>
+
+                    <!-- Available Juz Grid -->
+                    <div class="mb-4">
+                        <div class="d-flex align-items-center mb-3">
+                            <i class="fas fa-th text-warning me-2"></i>
+                            <h5 class="mb-0">Select Juz</h5>
+                        </div>
+                        
+                        <div class="honeycomb">
+                            {% set assigned = [] %}
+                            {% for p in hatim.participations %}
+                                {% for j in p.assigned_juz.split(',') %}
+                                    {% set _ = assigned.append(j) %}
+                                {% endfor %}
+                            {% endfor %}
+                            
+                            {% for i in range(1, 31) %}
+                                <div class="honeycomb-cell {% if i|string in assigned %}taken{% endif %}" 
+                                     data-juz="{{ i }}" 
+                                     onclick="toggleJuz(this)">
+                                    <div class="honeycomb-content">
+                                        <span class="juz-number">{{ i }}</span>
+                                        <span class="juz-status">
+                                            {% if i|string in assigned %}
+                                                Taken
+                                            {% else %}
+                                                Available
+                                            {% endif %}
+                                        </span>
+                                    </div>
+                                </div>
+                            {% endfor %}
+                        </div>
+
+                        <div class="selected-juz mt-4" id="selectedJuzDisplay">
+                            <strong>Selected:</strong>
+                            <div id="selectedJuzTags" class="mt-2"></div>
+                        </div>
+                    </div>
+
+                    <!-- Join Form -->
+                    <form method="POST" action="">
+                        {{ form.hidden_tag() }}
+                        <div class="mb-3">
+                            {{ form.assigned_juz(class="form-control", id="assignedJuzInput") }}
+                            {% for error in form.assigned_juz.errors %}
+                                <div class="text-danger">{{ error }}</div>
+                            {% endfor %}
+                        </div>
+                        <div class="d-grid gap-2">
+                            <button type="submit" class="btn btn-warning">
+                                <i class="fas fa-check-circle"></i> Confirm Selection
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+let selectedJuz = new Set();
+
+function toggleJuz(element) {
+    if (element.classList.contains('taken')) return;
+    
+    const juzNumber = element.dataset.juz;
+    if (element.classList.contains('selected')) {
+        element.classList.remove('selected');
+        selectedJuz.delete(juzNumber);
+    } else {
+        element.classList.add('selected');
+        selectedJuz.add(juzNumber);
+    }
+    
+    updateSelectedJuzDisplay();
+    updateFormInput();
+}
+
+function updateSelectedJuzDisplay() {
+    const container = document.getElementById('selectedJuzTags');
+    container.innerHTML = '';
+    
+    const sortedJuz = Array.from(selectedJuz).sort((a, b) => parseInt(a) - parseInt(b));
+    sortedJuz.forEach(juz => {
+        const tag = document.createElement('span');
+        tag.className = 'selected-juz-tag';
+        tag.textContent = `Juz ${juz}`;
+        container.appendChild(tag);
+    });
+}
+
+function updateFormInput() {
+    const input = document.getElementById('assignedJuzInput');
+    input.value = Array.from(selectedJuz).join(',');
+}
+
+// Initialize from existing form data
+document.addEventListener('DOMContentLoaded', function() {
+    const input = document.getElementById('assignedJuzInput');
+    if (input.value) {
+        input.value.split(',').forEach(juz => {
+            const element = document.querySelector(`.honeycomb-cell[data-juz="${juz}"]`);
+            if (element && !element.classList.contains('taken')) {
+                element.classList.add('selected');
+                selectedJuz.add(juz);
+            }
+        });
+        updateSelectedJuzDisplay();
+    }
+});
+</script>
+{% endblock %}

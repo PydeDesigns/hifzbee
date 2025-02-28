@@ -1,0 +1,104 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container my-4">
+    <div class="row">
+        <div class="col-md-8 offset-md-2">
+            <div class="card">
+                <div class="card-header bg-warning text-dark">
+                    <h4><i class="fas fa-user-circle"></i> Profile</h4>
+                </div>
+                <div class="card-body">
+                    <div class="row mb-4">
+                        <div class="col-md-4 text-center">
+                            <div class="hexagon-avatar">
+                                {% if current_user.avatar %}
+                                    <img src="{{ current_user.avatar }}" alt="Profile Picture" class="img-fluid rounded-circle">
+                                {% else %}
+                                    <i class="fas fa-user-circle fa-6x text-warning"></i>
+                                {% endif %}
+                            </div>
+                        </div>
+                        <div class="col-md-8">
+                            <h5>{{ current_user.username }}</h5>
+                            <p class="text-muted">{{ current_user.email }}</p>
+                            <p>Member since: {{ current_user.created_at.strftime('%B %d, %Y') }}</p>
+                        </div>
+                    </div>
+
+                    <div class="achievements-section mb-4">
+                        <h5><i class="fas fa-trophy text-warning"></i> Achievements</h5>
+                        <div class="honeycomb-grid">
+                            {% for achievement in current_user.achievements %}
+                            <div class="honeycomb-cell">
+                                <div class="achievement-icon">
+                                    <i class="{{ achievement.icon }} text-warning"></i>
+                                </div>
+                                <div class="achievement-title">{{ achievement.title }}</div>
+                            </div>
+                            {% endfor %}
+                        </div>
+                    </div>
+
+                    <div class="participation-section">
+                        <h5><i class="fas fa-book-reader text-warning"></i> Hatim Participation</h5>
+                        <div class="list-group">
+                            {% for participation in current_user.participations %}
+                            <div class="list-group-item">
+                                <h6>{{ participation.hatim.title }}</h6>
+                                <p class="mb-1">Juz: {{ participation.juz_number }}</p>
+                                <small class="text-muted">Started: {{ participation.created_at.strftime('%B %d, %Y') }}</small>
+                            </div>
+                            {% endfor %}
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+/* Mobile-first styles */
+.hexagon-avatar {
+    width: 150px;
+    height: 150px;
+    margin: 0 auto;
+    position: relative;
+    clip-path: polygon(50% 0%, 100% 25%, 100% 75%, 50% 100%, 0% 75%, 0% 25%);
+    background-color: #f8f9fa;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
+}
+
+.honeycomb-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 15px;
+    padding: 15px;
+}
+
+.honeycomb-cell {
+    background-color: #fff8e1;
+    border: 2px solid #ffd54f;
+    padding: 15px;
+    text-align: center;
+    clip-path: polygon(50% 0%, 100% 25%, 100% 75%, 50% 100%, 0% 75%, 0% 25%);
+}
+
+/* Tablet and desktop styles */
+@media (min-width: 768px) {
+    .honeycomb-grid {
+        grid-template-columns: repeat(4, 1fr);
+    }
+}
+
+@media (min-width: 992px) {
+    .honeycomb-grid {
+        grid-template-columns: repeat(6, 1fr);
+    }
+}
+</style>
+{% endblock %}

@@ -1,0 +1,71 @@
+{% extends "base.html" %}
+
+{% block title %}Create Hatim{% endblock %}
+
+{% block content %}
+<div class="container">
+    <div class="row justify-content-center">
+        <div class="col-md-8">
+            <div class="card">
+                <div class="card-header bg-primary text-white">
+                    <h3 class="card-title mb-0">Create New Hatim</h3>
+                </div>
+                <div class="card-body">
+                    <form method="POST" action="">
+                        {{ form.hidden_tag() }}
+                        
+                        <div class="mb-3">
+                            {{ form.title.label(class="form-label") }}
+                            {{ form.title(class="form-control") }}
+                            {% for error in form.title.errors %}
+                            <span class="text-danger">{{ error }}</span>
+                            {% endfor %}
+                        </div>
+
+                        <div class="mb-3">
+                            {{ form.target_completion_date.label(class="form-label") }}
+                            {{ form.target_completion_date(class="form-control", type="date") }}
+                            {% for error in form.target_completion_date.errors %}
+                            <span class="text-danger">{{ error }}</span>
+                            {% endfor %}
+                        </div>
+
+                        <div class="mb-3 form-check">
+                            {{ form.is_public(class="form-check-input") }}
+                            {{ form.is_public.label(class="form-check-label") }}
+                            <small class="form-text text-muted d-block">
+                                Public hatims will be visible to all users
+                            </small>
+                        </div>
+
+                        <div class="mb-3 form-check">
+                            {{ form.auto_join(class="form-check-input") }}
+                            {{ form.auto_join.label(class="form-check-label") }}
+                            <small class="form-text text-muted d-block">
+                                Allow friends to join without approval
+                            </small>
+                        </div>
+
+                        <div class="alert alert-info">
+                            <h5><i class="fas fa-info-circle"></i> Important Information</h5>
+                            <ul class="mb-0">
+                                <li>You'll earn 50 XP points for creating a hatim</li>
+                                <li>Each participant will earn XP for completing their assigned Juz</li>
+                                <li>All participants will receive bonus XP when the entire hatim is completed</li>
+                            </ul>
+                        </div>
+
+                        <div class="d-grid">
+                            {{ form.submit(class="btn btn-primary btn-lg") }}
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block styles %}
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css">
+{% endblock %}

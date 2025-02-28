@@ -1,0 +1,105 @@
+{% extends "base.html" %}
+
+{% block title %}Dashboard{% endblock %}
+
+{% block content %}
+<div class="container">
+    <div class="row mb-4">
+        <div class="col">
+            <h1>Your Hatim Dashboard</h1>
+        </div>
+        <div class="col-auto">
+            <a href="{{ url_for('hatim.create') }}" class="btn btn-primary">
+                <i class="fas fa-plus"></i> Start New Hatim
+            </a>
+            <a href="{{ url_for('hatim.browse') }}" class="btn btn-outline-primary">
+                Browse Hatims
+            </a>
+        </div>
+    </div>
+
+    <!-- Active Hatims -->
+    <div class="card mb-4">
+        <div class="card-header bg-primary text-white">
+            <h3 class="card-title mb-0">Active Hatims</h3>
+        </div>
+        <div class="card-body">
+            {% if active_participations %}
+            <div class="row">
+                {% for participation in active_participations %}
+                <div class="col-md-6 mb-3">
+                    <div class="card h-100">
+                        <div class="card-body">
+                            <h5 class="card-title">{{ participation.hatim.title }}</h5>
+                            <p class="card-text">
+                                <small class="text-muted">
+                                    Created by: {{ participation.hatim.creator.username }}<br>
+                                    Target completion: {{ participation.hatim.target_completion_date.strftime('%Y-%m-%d') }}
+                                </small>
+                            </p>
+                            <div class="mb-3">
+                                <strong>Your Assigned Juz:</strong>
+                                <p>{{ participation.assigned_juz.replace(',', ', ') }}</p>
+                            </div>
+                            <div class="progress mb-3">
+                                {% set total_juz = participation.assigned_juz.count(',') + 1 %}
+                                {% set progress = (participation.completion_status|int) * 100 %}
+                                <div class="progress-bar" role="progressbar" 
+                                     style="width: {{ progress }}%"
+                                     aria-valuenow="{{ progress }}" 
+                                     aria-valuemin="0" 
+                                     aria-valuemax="100">
+                                    {{ progress }}%
+                                </div>
+                            </div>
+                            <a href="{{ url_for('hatim.update_progress', participation_id=participation.id) }}" 
+                               class="btn btn-primary">Update Progress</a>
+                        </div>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+            {% else %}
+            <p>You are not participating in any active hatims.</p>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- Completed Hatims -->
+    <div class="card">
+        <div class="card-header bg-success text-white">
+            <h3 class="card-title mb-0">Completed Hatims</h3>
+        </div>
+        <div class="card-body">
+            {% if completed_participations %}
+            <div class="row">
+                {% for participation in completed_participations %}
+                <div class="col-md-6 mb-3">
+                    <div class="card h-100 border-success">
+                        <div class="card-body">
+                            <h5 class="card-title">{{ participation.hatim.title }}</h5>
+                            <p class="card-text">
+                                <small class="text-muted">
+                                    Completed on: {{ participation.hatim.target_completion_date.strftime('%Y-%m-%d') }}<br>
+                                    Your contribution: {{ participation.assigned_juz.replace(',', ', ') }}
+                                </small>
+                            </p>
+                            <div class="text-success">
+                                <i class="fas fa-check-circle"></i> Completed
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+            {% else %}
+            <p>You haven't completed any hatims yet.</p>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block styles %}
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css">
+{% endblock %}

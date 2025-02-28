@@ -1,0 +1,121 @@
+{% extends "base.html" %}
+
+{% block title %}Update Progress{% endblock %}
+
+{% block content %}
+<div class="container">
+    <div class="row justify-content-center">
+        <div class="col-md-8">
+            <div class="card">
+                <div class="card-header bg-primary text-white">
+                    <h3 class="card-title mb-0">Update Your Progress</h3>
+                </div>
+                <div class="card-body">
+                    <!-- Hatim Information -->
+                    <div class="mb-4">
+                        <h5>{{ participation.hatim.title }}</h5>
+                        <p class="text-muted">
+                            <i class="fas fa-calendar"></i> Target completion: 
+                            {{ participation.hatim.target_completion_date.strftime('%Y-%m-%d') }}
+                        </p>
+                    </div>
+
+                    <!-- Your Assigned Juz -->
+                    <div class="mb-4">
+                        <h5>Your Assigned Juz</h5>
+                        <div class="juz-progress-grid mb-3">
+                            {% for juz in participation.assigned_juz.split(',') %}
+                            <div class="juz-progress-item">
+                                <div class="juz-number">Juz {{ juz }}</div>
+                                <div class="form-check">
+                                    <input class="form-check-input" type="checkbox" 
+                                           value="{{ juz }}" id="juz{{ juz }}"
+                                           {% if juz in form.completed_juz.data %}checked{% endif %}>
+                                    <label class="form-check-label" for="juz{{ juz }}">
+                                        Completed
+                                    </label>
+                                </div>
+                            </div>
+                            {% endfor %}
+                        </div>
+                    </div>
+
+                    <!-- Progress Form -->
+                    <form method="POST" action="">
+                        {{ form.hidden_tag() }}
+                        
+                        <div class="mb-3">
+                            {{ form.completed_juz.label(class="form-label") }}
+                            {{ form.completed_juz(class="form-select", multiple="multiple", hidden="hidden") }}
+                            {% for error in form.completed_juz.errors %}
+                            <span class="text-danger">{{ error }}</span>
+                            {% endfor %}
+                        </div>
+
+                        <div class="alert alert-info">
+                            <h5><i class="fas fa-info-circle"></i> Rewards</h5>
+                            <ul class="mb-0">
+                                <li>Earn 10 XP for each Juz you complete</li>
+                                <li>Get 100 bonus XP when the entire hatim is completed</li>
+                            </ul>
+                        </div>
+
+                        <div class="d-grid gap-2">
+                            {{ form.submit(class="btn btn-primary btn-lg") }}
+                            <a href="{{ url_for('hatim.dashboard') }}" class="btn btn-outline-secondary">
+                                Back to Dashboard
+                            </a>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block styles %}
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css">
+<style>
+.juz-progress-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+    gap: 15px;
+}
+.juz-progress-item {
+    border: 1px solid #ddd;
+    border-radius: 5px;
+    padding: 15px;
+    text-align: center;
+}
+.juz-number {
+    font-size: 1.1em;
+    font-weight: bold;
+    margin-bottom: 10px;
+}
+</style>
+{% endblock %}
+
+{% block scripts %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Update hidden form field when checkboxes change
+    const checkboxes = document.querySelectorAll('.form-check-input');
+    const hiddenInput = document.querySelector('#completed_juz');
+    
+    function updateSelectedJuz() {
+        const selected = Array.from(checkboxes)
+            .filter(cb => cb.checked)
+            .map(cb => cb.value);
+        hiddenInput.value = selected.join(',');
+    }
+    
+    checkboxes.forEach(checkbox => {
+        checkbox.addEventListener('change', updateSelectedJuz);
+    });
+    
+    // Initial update
+    updateSelectedJuz();
+});
+</script>
+{% endblock %}
